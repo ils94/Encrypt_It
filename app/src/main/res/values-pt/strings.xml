@@ -16,7 +16,8 @@
     <string name="add_new_contact_alertdialog_title">Adicionar Novo Contato</string>
     <string name="add_new_contact_save_button">Salvar</string>
     <string name="add_new_contact_cancel_button">Cancelar</string>
-    <string name="add_new_contact_toast">Nome do Contato e Chave Pública não podem estar vazios.</string>
+    <string name="add_new_contact_toast_1">Nome do Contato e Chave Pública não podem estar vazios.</string>
+    <string name="add_new_contact_toast_2">Contato foi adicionado!</string>
 
     <string name="remove_contact_alertdialog_title">Remover Contatos</string>
     <string name="remove_contact_remove_button">Remover</string>

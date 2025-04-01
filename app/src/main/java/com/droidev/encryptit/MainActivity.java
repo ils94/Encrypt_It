@@ -17,6 +17,11 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -28,6 +33,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.Cipher;
@@ -234,13 +240,15 @@ public class MainActivity extends AppCompatActivity {
 
                     if (name.isEmpty() || key.isEmpty()) {
 
-                        Toast.makeText(this, R.string.add_new_contact_toast, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.add_new_contact_toast_1, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     contacts.put(name, key);
                     prefs.edit().putString(name, key).apply();
                     updateAutoComplete();
+
+                    Toast.makeText(this, R.string.add_new_contact_toast_2, Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.add_new_contact_cancel_button, null)
                 .show();
@@ -252,34 +260,31 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         builder.setTitle(R.string.remove_contact_alertdialog_title);
         builder.setCancelable(false);
 
-        ListView listView = new ListView(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_multiple_choice, new ArrayList<>(contacts.keySet()));
-        listView.setAdapter(adapter);
-        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        RecyclerView recyclerView = new RecyclerView(this);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        builder.setView(listView)
+        ArrayList<String> contactList = new ArrayList<>(contacts.keySet());
+        ContactAdapter adapter = new ContactAdapter(contactList);
+        recyclerView.setAdapter(adapter);
+
+        builder.setView(recyclerView)
                 .setPositiveButton(R.string.remove_contact_remove_button, (dialog, which) -> {
-                    ArrayList<String> contactsToRemove = new ArrayList<>();
-                    for (int i = 0; i < listView.getCount(); i++) {
-                        if (listView.isItemChecked(i)) {
-                            contactsToRemove.add(adapter.getItem(i));
-                        }
-                    }
+                    List<String> contactsToRemove = adapter.getSelectedContacts();
 
                     if (contactsToRemove.isEmpty()) {
                         Toast.makeText(this, R.string.remove_contact_toast_1, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    new AlertDialog.Builder(this)
+                    new MaterialAlertDialogBuilder(this)
                             .setTitle(R.string.remove_contact_confirm_alertdialog_title)
                             .setCancelable(false)
-                            .setMessage(R.string.remove_contact_confirm_alertdialog_message_1 + " " + contactsToRemove.size() + " " + R.string.remove_contact_confirm_alertdialog_message_2)
+                            .setMessage(getString(R.string.remove_contact_confirm_alertdialog_message_1) + " " +
+                                    contactsToRemove.size() + " " + getString(R.string.remove_contact_confirm_alertdialog_message_2))
                             .setPositiveButton(R.string.remove_contact_confirm_alertdialog_yes, (confirmDialog, confirmWhich) -> {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 for (String contact : contactsToRemove) {
@@ -292,7 +297,10 @@ public class MainActivity extends AppCompatActivity {
                                 }
                                 editor.apply();
                                 updateAutoComplete();
-                                Toast.makeText(this, contactsToRemove.size() + " " + R.string.remove_contact_toast_2, Toast.LENGTH_SHORT).show();
+
+                                Snackbar.make(findViewById(android.R.id.content),
+                                        contactsToRemove.size() + " " + getString(R.string.remove_contact_toast_2),
+                                        Snackbar.LENGTH_SHORT).show();
                             })
                             .setNegativeButton(R.string.remove_contact_confirm_alertdialog_no, null)
                             .show();

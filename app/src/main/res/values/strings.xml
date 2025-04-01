@@ -16,7 +16,8 @@
     <string name="add_new_contact_alertdialog_title">Add New Contact</string>
     <string name="add_new_contact_save_button">Save</string>
     <string name="add_new_contact_cancel_button">Cancel</string>
-    <string name="add_new_contact_toast">Contact Name and Public Key cannot be empty.</string>
+    <string name="add_new_contact_toast_1">Contact Name and Public Key cannot be empty.</string>
+    <string name="add_new_contact_toast_2">Contact has been added!</string>
 
     <string name="remove_contact_alertdialog_title">Remove Contacts</string>
     <string name="remove_contact_remove_button">Remove</string>
