@@ -1,43 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
     android:orientation="vertical"
     android:padding="16dp">
 
-    <AutoCompleteTextView
-        android:id="@+id/contactAutoComplete"
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/select_contact_hint" />
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp">
 
-    <EditText
-        android:id="@+id/messageEditText"
+        <AutoCompleteTextView
+            android:id="@+id/contactAutoComplete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:hint="@string/select_contact_hint"
+            android:padding="12dp"
+            android:textColorHint="@android:color/darker_gray" />
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:gravity="top"
-        android:hint="@string/edit_text_hint" />
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp">
+
+        <EditText
+            android:id="@+id/messageEditText"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:gravity="top"
+            android:hint="@string/edit_text_hint"
+            android:padding="12dp"
+            android:textColorHint="@android:color/darker_gray" />
+    </androidx.cardview.widget.CardView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
         android:orientation="horizontal">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/encryptButton"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="@string/encrypt_button" />
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/purple_500"
+            android:text="@string/encrypt_button"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            app:cornerRadius="16dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/decryptButton"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="@string/decrypt_button" />
-
+            android:layout_weight="1"
+            android:backgroundTint="@color/teal_700"
+            android:text="@string/decrypt_button"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            app:cornerRadius="16dp" />
     </LinearLayout>
 
 </LinearLayout>
