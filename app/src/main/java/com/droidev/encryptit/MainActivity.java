@@ -176,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
             String encryptedText = Base64.encodeToString(encryptedAesKey, Base64.DEFAULT) + ":" +
                     Base64.encodeToString(ivBytes, Base64.DEFAULT) + ":" +
                     Base64.encodeToString(encryptedMessage, Base64.DEFAULT);
-            messageEditText.setText(encryptedText);
 
             // Copy encrypted text to clipboard
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
