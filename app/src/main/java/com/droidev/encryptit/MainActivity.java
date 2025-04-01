@@ -228,6 +228,7 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setView(view)
                 .setCancelable(false)
+                .setTitle("Add New Contact")
                 .setPositiveButton("Save", (dialog, which) -> {
                     String name = nameEditText.getText().toString();
                     String key = keyEditText.getText().toString();
