@@ -298,9 +298,7 @@ public class MainActivity extends AppCompatActivity {
                                 editor.apply();
                                 updateAutoComplete();
 
-                                Snackbar.make(findViewById(android.R.id.content),
-                                        contactsToRemove.size() + " " + getString(R.string.remove_contact_toast_2),
-                                        Snackbar.LENGTH_SHORT).show();
+                                Toast.makeText(this, contactsToRemove.size() + " " + getString(R.string.remove_contact_toast_2), Toast.LENGTH_SHORT).show();
                             })
                             .setNegativeButton(R.string.remove_contact_confirm_alertdialog_no, null)
                             .show();
