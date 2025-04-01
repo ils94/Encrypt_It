@@ -14,8 +14,8 @@
     <string name="public_key_hint">Public Key</string>
 
     <string name="add_new_contact_alertdialog_title">Add New Contact</string>
-    <string name="add_new_contact_save_button">Save</string>
-    <string name="add_new_contact_cancel_button">Cancel</string>
+    <string name="button_save">Save</string>
+    <string name="cancel_button">Cancel</string>
     <string name="add_new_contact_toast_1">Contact Name and Public Key cannot be empty.</string>
     <string name="add_new_contact_toast_2">Contact has been added!</string>
 
@@ -46,4 +46,15 @@
     <string name="no_contacts_to_remove_toast">No contacts to remove!</string>
     <string name="encrypted_message_copied_to_clipboard_toast">Encrypted message copied to clipboard!</string>
     <string name="encryption_failed_toast">Encryption failed:</string>
+
+    <string name="generate_rsa_key_pair_hint">Enter encryption password</string>
+    <string name="generate_rsa_key_pair_builder_title">Set Private Key Password</string>
+    <string name="generate_rsa_key_pair_builder_toast_1">Password cannot be empty</string>
+    <string name="generate_rsa_key_pair_builder_toast_2">Key generation failed:</string>
+
+    <string name="prompt_for_password_to_decrypt_hint">Enter decryption password</string>
+    <string name="prompt_for_password_to_decrypt_builder_title">Unlock Private Key</string>
+    <string name="unlock_button">Unlock</string>
+    <string name="prompt_for_password_to_decrypt_toast_1">Private key unlocked</string>
+    <string name="prompt_for_password_to_decrypt_toast_2">Decryption failed:</string>
 </resources>

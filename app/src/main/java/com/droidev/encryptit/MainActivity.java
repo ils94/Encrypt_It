@@ -5,6 +5,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,15 +15,11 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -38,16 +35,20 @@ import java.util.List;
 import java.util.Map;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
     private EditText messageEditText;
     private AutoCompleteTextView contactAutoComplete;
     private KeyPair keyPair;
-    private Map<String, String> contacts = new HashMap<>();
+    private final Map<String, String> contacts = new HashMap<>();
     private SharedPreferences prefs;
     private PublicKey selectedPublicKey;
+    private PrivateKey runtimePrivateKey; // Decrypted private key for runtime use
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,10 +65,15 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences("CryptoPrefs", MODE_PRIVATE);
         initializeKeys();
 
+        // Prompt for password to decrypt private key if it exists
+        if (prefs.contains("encryptedPrivateKey")) {
+            promptForPasswordToDecrypt();
+        }
+
         // Load contacts from SharedPreferences (excluding key pair entries)
         Map<String, ?> allPrefs = prefs.getAll();
         for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
-            if (!entry.getKey().equals("myPublicKey") && !entry.getKey().equals("myPrivateKey")) {
+            if (!entry.getKey().equals("myPublicKey") && !entry.getKey().equals("encryptedPrivateKey")) {
                 contacts.put(entry.getKey(), (String) entry.getValue());
             }
         }
@@ -111,21 +117,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeKeys() {
-        if (prefs.contains("myPublicKey") && prefs.contains("myPrivateKey")) {
-            // Load existing keys
+        if (prefs.contains("myPublicKey") && prefs.contains("encryptedPrivateKey")) {
+            // Load public key (private key will be decrypted later)
             try {
                 String pubKeyBase64 = prefs.getString("myPublicKey", "");
                 byte[] pubKeyBytes = Base64.decode(pubKeyBase64, Base64.DEFAULT);
                 X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(pubKeyBytes);
                 KeyFactory kf = KeyFactory.getInstance("RSA");
                 PublicKey publicKey = kf.generatePublic(pubSpec);
-
-                String privKeyBase64 = prefs.getString("myPrivateKey", "");
-                byte[] privKeyBytes = Base64.decode(privKeyBase64, Base64.DEFAULT);
-                PKCS8EncodedKeySpec privSpec = new PKCS8EncodedKeySpec(privKeyBytes);
-                PrivateKey privateKey = kf.generatePrivate(privSpec);
-
-                keyPair = new KeyPair(publicKey, privateKey);
+                keyPair = new KeyPair(publicKey, null); // Private key loaded later
             } catch (Exception e) {
                 e.printStackTrace();
                 generateRSAKeyPair(); // Fallback to generating new keys
@@ -136,21 +136,120 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateRSAKeyPair() {
-        try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(2048);
-            keyPair = keyGen.generateKeyPair();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        EditText passwordInput = new EditText(this);
+        passwordInput.setHint(R.string.generate_rsa_key_pair_hint);
+        passwordInput.setTransformationMethod(PasswordTransformationMethod.getInstance());
 
-            String pubKeyBase64 = Base64.encodeToString(keyPair.getPublic().getEncoded(), Base64.DEFAULT);
-            String privKeyBase64 = Base64.encodeToString(keyPair.getPrivate().getEncoded(), Base64.DEFAULT);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putString("myPublicKey", pubKeyBase64);
-            editor.putString("myPrivateKey", privKeyBase64);
-            editor.apply();
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, R.string.key_generation_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        builder.setView(passwordInput)
+                .setTitle(R.string.generate_rsa_key_pair_builder_title)
+                .setPositiveButton(R.string.button_save, null)
+                .setCancelable(false);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Override the positive button click listener to prevent auto-dismiss
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String password = passwordInput.getText().toString();
+            if (password.isEmpty()) {
+                Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_1, Toast.LENGTH_SHORT).show();
+                return; // Dialog won't dismiss
+            }
+
+            try {
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                keyGen.initialize(2048);
+                keyPair = keyGen.generateKeyPair();
+
+                String pubKeyBase64 = Base64.encodeToString(keyPair.getPublic().getEncoded(), Base64.DEFAULT);
+                encryptAndStorePrivateKey(keyPair.getPrivate(), password);
+
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("myPublicKey", pubKeyBase64);
+                editor.apply();
+
+                dialog.dismiss(); // Only dismiss when successful
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_2 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void encryptAndStorePrivateKey(PrivateKey privateKey, String password) throws Exception {
+        // Generate a random IV
+        byte[] iv = new byte[16];
+        new SecureRandom().nextBytes(iv);
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+
+        // Generate a random salt for PBKDF2
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+
+        // Derive AES key from password using PBKDF2
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 10000, 256);
+        SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKey aesKey = new SecretKeySpec(skf.generateSecret(spec).getEncoded(), "AES");
+
+        // Encrypt private key with AES-256-CBC
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
+        byte[] encryptedPrivateKey = cipher.doFinal(privateKey.getEncoded());
+
+        // Store IV, salt, and encrypted key
+        String storedValue = Base64.encodeToString(iv, Base64.DEFAULT) + ":" +
+                Base64.encodeToString(salt, Base64.DEFAULT) + ":" +
+                Base64.encodeToString(encryptedPrivateKey, Base64.DEFAULT);
+        prefs.edit().putString("encryptedPrivateKey", storedValue).apply();
+    }
+
+    private void promptForPasswordToDecrypt() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        EditText passwordInput = new EditText(this);
+        passwordInput.setHint(R.string.prompt_for_password_to_decrypt_hint);
+        passwordInput.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        builder.setView(passwordInput)
+                .setTitle(R.string.prompt_for_password_to_decrypt_builder_title)
+                .setPositiveButton(R.string.unlock_button, (dialog, which) -> {
+                    String password = passwordInput.getText().toString();
+                    try {
+                        runtimePrivateKey = decryptPrivateKey(password);
+                        keyPair = new KeyPair(keyPair.getPublic(), runtimePrivateKey);
+                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1, Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        promptForPasswordToDecrypt(); // Retry on failure
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private PrivateKey decryptPrivateKey(String password) throws Exception {
+        String storedValue = prefs.getString("encryptedPrivateKey", "");
+        String[] parts = storedValue.split(":");
+        if (parts.length != 3) throw new IllegalArgumentException("Invalid encrypted key format");
+
+        byte[] iv = Base64.decode(parts[0], Base64.DEFAULT);
+        byte[] salt = Base64.decode(parts[1], Base64.DEFAULT);
+        byte[] encryptedPrivateKey = Base64.decode(parts[2], Base64.DEFAULT);
+
+        // Derive AES key from password using PBKDF2
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 10000, 256);
+        SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKey aesKey = new SecretKeySpec(skf.generateSecret(spec).getEncoded(), "AES");
+
+        // Decrypt private key
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+        byte[] decryptedKeyBytes = cipher.doFinal(encryptedPrivateKey);
+
+        // Reconstruct PrivateKey object
+        PKCS8EncodedKeySpec privSpec = new PKCS8EncodedKeySpec(decryptedKeyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePrivate(privSpec);
     }
 
     private void encryptMessage() {
@@ -197,6 +296,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void decryptMessage() {
+        if (runtimePrivateKey == null) {
+            Toast.makeText(this, "Private key not unlocked yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
         try {
             String encryptedText = messageEditText.getText().toString();
             String[] parts = encryptedText.split(":", 3);
@@ -211,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Decrypt the AES key with RSA
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            rsaCipher.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+            rsaCipher.init(Cipher.DECRYPT_MODE, runtimePrivateKey);
             byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
             SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
@@ -237,12 +340,11 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(view)
                 .setCancelable(false)
                 .setTitle(R.string.add_new_contact_alertdialog_title)
-                .setPositiveButton(R.string.add_new_contact_save_button, (dialog, which) -> {
+                .setPositiveButton(R.string.button_save, (dialog, which) -> {
                     String name = nameEditText.getText().toString();
                     String key = keyEditText.getText().toString();
 
                     if (name.isEmpty() || key.isEmpty()) {
-
                         Toast.makeText(this, R.string.add_new_contact_toast_1, Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -253,7 +355,7 @@ public class MainActivity extends AppCompatActivity {
 
                     Toast.makeText(this, R.string.add_new_contact_toast_2, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton(R.string.add_new_contact_cancel_button, null)
+                .setNegativeButton(R.string.cancel_button, null)
                 .show();
     }
 
@@ -325,7 +427,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showPublicKey() {
-        if (keyPair == null) {
+        if (keyPair == null || keyPair.getPublic() == null) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(R.string.public_key_alertdialog_error_title)
                     .setMessage(R.string.public_key_alertdialog_error_message)

@@ -14,8 +14,8 @@
     <string name="public_key_hint">Chave Pública</string>
 
     <string name="add_new_contact_alertdialog_title">Adicionar Novo Contato</string>
-    <string name="add_new_contact_save_button">Salvar</string>
-    <string name="add_new_contact_cancel_button">Cancelar</string>
+    <string name="button_save">Salvar</string>
+    <string name="cancel_button">Cancelar</string>
     <string name="add_new_contact_toast_1">Nome do Contato e Chave Pública não podem estar vazios.</string>
     <string name="add_new_contact_toast_2">Contato foi adicionado!</string>
 
@@ -46,4 +46,15 @@
     <string name="no_contacts_to_remove_toast">Nenhum contato para remover!</string>
     <string name="encrypted_message_copied_to_clipboard_toast">Mensagem criptografada copiada para a área de transferência!</string>
     <string name="encryption_failed_toast">Falha na criptografia:</string>
+
+    <string name="generate_rsa_key_pair_hint">Digite a senha de criptografia</string>
+    <string name="generate_rsa_key_pair_builder_title">Defina a Senha da Chave Privada</string>
+    <string name="generate_rsa_key_pair_builder_toast_1">A senha não pode estar vazia</string>
+    <string name="generate_rsa_key_pair_builder_toast_2">Falha na geração da chave:</string>
+
+    <string name="prompt_for_password_to_decrypt_hint">Digite a senha de descriptografia</string>
+    <string name="prompt_for_password_to_decrypt_builder_title">Desbloquear Chave Privada</string>
+    <string name="unlock_button">Desbloquear</string>
+    <string name="prompt_for_password_to_decrypt_toast_1">Chave privada desbloqueada</string>
+    <string name="prompt_for_password_to_decrypt_toast_2">Falha na descriptografia:</string>
 </resources>
