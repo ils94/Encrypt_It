@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">Encrypt It</string>
+
+    <string name="select_contact_hint">Selecionar Contato</string>
+    <string name="edit_text_hint">Digite a mensagem ou cole o texto criptografado</string>
+    <string name="encrypt_button">Criptografar</string>
+    <string name="decrypt_button">Descriptografar</string>
+
+    <string name="show_keys_menu_button">Mostrar Minha Chave Pública</string>
+    <string name="add_contact_menu_button">Adicionar Contato</string>
+    <string name="remove_contact_menu_button">Remover Contato</string>
+
+    <string name="contact_name_hint">Nome do Contato</string>
+    <string name="public_key_hint">Chave Pública</string>
+
+    <string name="add_new_contact_alertdialog_title">Adicionar Novo Contato</string>
+    <string name="add_new_contact_save_button">Salvar</string>
+    <string name="add_new_contact_cancel_button">Cancelar</string>
+    <string name="add_new_contact_toast">Nome do Contato e Chave Pública não podem estar vazios.</string>
+
+    <string name="remove_contact_alertdialog_title">Remover Contatos</string>
+    <string name="remove_contact_remove_button">Remover</string>
+    <string name="remove_contact_cancel_button">Cancelar</string>
+    <string name="remove_contact_toast_1">Nenhum contato selecionado!</string>
+    <string name="remove_contact_toast_2">contato(s) removido(s)!</string>
+
+    <string name="remove_contact_confirm_alertdialog_title">Confirmar Remoção</string>
+    <string name="remove_contact_confirm_alertdialog_message_1">Tem certeza de que deseja remover</string>
+    <string name="remove_contact_confirm_alertdialog_message_2">contato(s)?</string>
+    <string name="remove_contact_confirm_alertdialog_yes">Sim</string>
+    <string name="remove_contact_confirm_alertdialog_no">Não</string>
+
+    <string name="public_key_alertdialog_error_title">Erro</string>
+    <string name="public_key_alertdialog_error_message">Par de chaves não inicializado!</string>
+    <string name="public_key_alertdialog_error_ok">Ok</string>
+
+    <string name="public_key_alertdialog_title">Minha Chave Pública</string>
+    <string name="public_key_alertdialog_copy_button">Copiar</string>
+    <string name="public_key_alertdialog_close_button">Fechar</string>
+    <string name="public_key_alertdialog_toast">Chave pública copiada para a área de transferência!</string>
+
+    <string name="key_generation_failed_toast">Falha na geração da chave:</string>
+    <string name="select_a_contact_first_toast">Selecione um contato primeiro!</string>
+    <string name="decryption_failed_toast">Falha na descriptografia:</string>
+    <string name="no_contacts_to_remove_toast">Nenhum contato para remover!</string>
+    <string name="encrypted_message_copied_to_clipboard_toast">Mensagem criptografada copiada para a área de transferência!</string>
+    <string name="encryption_failed_toast">Falha na criptografia:</string>
+</resources>
