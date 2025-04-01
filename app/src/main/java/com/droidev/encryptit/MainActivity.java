@@ -260,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.remove_contact_alertdialog_title);
         builder.setCancelable(false);
 
@@ -280,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    new MaterialAlertDialogBuilder(this)
+                    new AlertDialog.Builder(this)
                             .setTitle(R.string.remove_contact_confirm_alertdialog_title)
                             .setCancelable(false)
                             .setMessage(getString(R.string.remove_contact_confirm_alertdialog_message_1) + " " +
