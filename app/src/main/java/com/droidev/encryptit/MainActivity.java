@@ -298,8 +298,12 @@ public class MainActivity extends AppCompatActivity {
     private void decryptMessage() {
         if (runtimePrivateKey == null) {
             Toast.makeText(this, "Private key not unlocked yet", Toast.LENGTH_SHORT).show();
-            return;
+
+            if (prefs.contains("encryptedPrivateKey")) {
+                promptForPasswordToDecrypt();
+            }
         }
+
         try {
             String encryptedText = messageEditText.getText().toString();
             String[] parts = encryptedText.split(":", 3);
