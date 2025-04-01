@@ -140,13 +140,13 @@ public class MainActivity extends AppCompatActivity {
             editor.apply();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Key generation failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.key_generation_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
     private void encryptMessage() {
         if (selectedPublicKey == null) {
-            Toast.makeText(this, "Select a contact first!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.select_a_contact_first_toast, Toast.LENGTH_SHORT).show();
             return;
         }
         try {
@@ -180,10 +180,10 @@ public class MainActivity extends AppCompatActivity {
             // Copy encrypted text to clipboard
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             clipboard.setText(encryptedText);
-            Toast.makeText(this, "Encrypted message copied to clipboard!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.encrypted_message_copied_to_clipboard_toast, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Encryption failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.encryption_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -214,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
             messageEditText.setText(new String(decryptedBytes));
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Decryption failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.decryption_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -227,14 +227,14 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setView(view)
                 .setCancelable(false)
-                .setTitle("Add New Contact")
-                .setPositiveButton("Save", (dialog, which) -> {
+                .setTitle(R.string.add_new_contact_alertdialog_title)
+                .setPositiveButton(R.string.add_new_contact_save_button, (dialog, which) -> {
                     String name = nameEditText.getText().toString();
                     String key = keyEditText.getText().toString();
 
                     if (name.isEmpty() || key.isEmpty()) {
 
-                        Toast.makeText(this, "Contact Name and Public Key cannot be empty.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.add_new_contact_toast, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -242,18 +242,18 @@ public class MainActivity extends AppCompatActivity {
                     prefs.edit().putString(name, key).apply();
                     updateAutoComplete();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.add_new_contact_cancel_button, null)
                 .show();
     }
 
     private void showRemoveContactDialog() {
         if (contacts.isEmpty()) {
-            Toast.makeText(this, "No contacts to remove!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.no_contacts_to_remove_toast, Toast.LENGTH_SHORT).show();
             return;
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Remove Contacts");
+        builder.setTitle(R.string.remove_contact_alertdialog_title);
         builder.setCancelable(false);
 
         ListView listView = new ListView(this);
@@ -263,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
         listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
 
         builder.setView(listView)
-                .setPositiveButton("Remove", (dialog, which) -> {
+                .setPositiveButton(R.string.remove_contact_remove_button, (dialog, which) -> {
                     ArrayList<String> contactsToRemove = new ArrayList<>();
                     for (int i = 0; i < listView.getCount(); i++) {
                         if (listView.isItemChecked(i)) {
@@ -272,15 +272,15 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if (contactsToRemove.isEmpty()) {
-                        Toast.makeText(this, "No contacts selected!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.remove_contact_toast_1, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     new AlertDialog.Builder(this)
-                            .setTitle("Confirm Removal")
+                            .setTitle(R.string.remove_contact_confirm_alertdialog_title)
                             .setCancelable(false)
-                            .setMessage("Are you sure you want to remove " + contactsToRemove.size() + " contact(s)?")
-                            .setPositiveButton("Yes", (confirmDialog, confirmWhich) -> {
+                            .setMessage(R.string.remove_contact_confirm_alertdialog_message_1 + " " + contactsToRemove.size() + " " + R.string.remove_contact_confirm_alertdialog_message_2)
+                            .setPositiveButton(R.string.remove_contact_confirm_alertdialog_yes, (confirmDialog, confirmWhich) -> {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 for (String contact : contactsToRemove) {
                                     contacts.remove(contact);
@@ -292,12 +292,12 @@ public class MainActivity extends AppCompatActivity {
                                 }
                                 editor.apply();
                                 updateAutoComplete();
-                                Toast.makeText(this, contactsToRemove.size() + " contact(s) removed!", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(this, contactsToRemove.size() + " " + R.string.remove_contact_toast_2, Toast.LENGTH_SHORT).show();
                             })
-                            .setNegativeButton("No", null)
+                            .setNegativeButton(R.string.remove_contact_confirm_alertdialog_no, null)
                             .show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.remove_contact_cancel_button, null)
                 .show();
     }
 
@@ -318,9 +318,9 @@ public class MainActivity extends AppCompatActivity {
     private void showPublicKey() {
         if (keyPair == null) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Error")
-                    .setMessage("Key pair not initialized!")
-                    .setPositiveButton("OK", null)
+            builder.setTitle(R.string.public_key_alertdialog_error_title)
+                    .setMessage(R.string.public_key_alertdialog_error_message)
+                    .setPositiveButton(R.string.public_key_alertdialog_error_ok, null)
                     .setCancelable(false)
                     .show();
             return;
@@ -329,15 +329,15 @@ public class MainActivity extends AppCompatActivity {
         String publicKey = prefs.getString("myPublicKey", "Not found");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("My Public Key")
+        builder.setTitle(R.string.public_key_alertdialog_title)
                 .setCancelable(false)
                 .setMessage(publicKey)
-                .setPositiveButton("Copy", (dialog, which) -> {
+                .setPositiveButton(R.string.public_key_alertdialog_copy_button, (dialog, which) -> {
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     clipboard.setText(publicKey);
-                    Toast.makeText(this, "Public key copied to clipboard!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.public_key_alertdialog_toast, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Close", null)
+                .setNegativeButton(R.string.public_key_alertdialog_close_button, null)
                 .show();
     }
 

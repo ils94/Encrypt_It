@@ -9,7 +9,7 @@
         android:id="@+id/contactAutoComplete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Select Contact" />
+        android:hint="@string/select_contact_hint" />
 
     <EditText
         android:id="@+id/messageEditText"
@@ -17,7 +17,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="top"
-        android:hint="Enter message or paste encrypted text" />
+        android:hint="@string/edit_text_hint" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,14 +29,14 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Encrypt" />
+            android:text="@string/encrypt_button" />
 
         <Button
             android:id="@+id/decryptButton"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Decrypt" />
+            android:text="@string/decrypt_button" />
 
     </LinearLayout>
 

@@ -1,3 +1,48 @@
 <resources>
     <string name="app_name">Encrypt It</string>
+
+    <string name="select_contact_hint">Select Contact</string>
+    <string name="edit_text_hint">Enter message or paste encrypted text</string>
+    <string name="encrypt_button">Encrypt</string>
+    <string name="decrypt_button">Decrypt</string>
+
+    <string name="show_keys_menu_button">Show My Public Key</string>
+    <string name="add_contact_menu_button">Add Contact</string>
+    <string name="remove_contact_menu_button">Remove Contact</string>
+
+    <string name="contact_name_hint">Contact Name</string>
+    <string name="public_key_hint">Public Key</string>
+
+    <string name="add_new_contact_alertdialog_title">Add New Contact</string>
+    <string name="add_new_contact_save_button">Save</string>
+    <string name="add_new_contact_cancel_button">Cancel</string>
+    <string name="add_new_contact_toast">Contact Name and Public Key cannot be empty.</string>
+
+    <string name="remove_contact_alertdialog_title">Remove Contacts</string>
+    <string name="remove_contact_remove_button">Remove</string>
+    <string name="remove_contact_cancel_button">Cancel</string>
+    <string name="remove_contact_toast_1">No contacts selected!</string>
+    <string name="remove_contact_toast_2">contact(s) removed!</string>
+
+    <string name="remove_contact_confirm_alertdialog_title">Confirm Removal</string>
+    <string name="remove_contact_confirm_alertdialog_message_1">Are you sure you want to remove</string>
+    <string name="remove_contact_confirm_alertdialog_message_2">contact(s)?</string>
+    <string name="remove_contact_confirm_alertdialog_yes">Yes</string>
+    <string name="remove_contact_confirm_alertdialog_no">No</string>
+
+    <string name="public_key_alertdialog_error_title">Error</string>
+    <string name="public_key_alertdialog_error_message">Key pair not initialized!</string>
+    <string name="public_key_alertdialog_error_ok">Ok</string>
+
+    <string name="public_key_alertdialog_title">My Public Key</string>
+    <string name="public_key_alertdialog_copy_button">Copy</string>
+    <string name="public_key_alertdialog_close_button">Close</string>
+    <string name="public_key_alertdialog_toast">Public key copied to clipboard!</string>
+
+    <string name="key_generation_failed_toast">Key generation failed:</string>
+    <string name="select_a_contact_first_toast">Select a contact first!</string>
+    <string name="decryption_failed_toast">Decryption failed:</string>
+    <string name="no_contacts_to_remove_toast">No contacts to remove!</string>
+    <string name="encrypted_message_copied_to_clipboard_toast">Encrypted message copied to clipboard!</string>
+    <string name="encryption_failed_toast">Encryption failed:</string>
 </resources>
