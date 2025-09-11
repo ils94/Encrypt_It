@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Encrypt It</string>
 
-    <string name="select_contact_hint">Select Contact</string>
+    <string name="select_contact_hint">Enter the contact name</string>
     <string name="edit_text_hint">Enter message or paste encrypted text</string>
     <string name="encrypt_button">Encrypt</string>
     <string name="decrypt_button">Decrypt</string>
