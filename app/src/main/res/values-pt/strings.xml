@@ -9,6 +9,10 @@
     <string name="show_keys_menu_button">Mostrar Minha Chave Pública</string>
     <string name="add_contact_menu_button">Adicionar Contato</string>
     <string name="remove_contact_menu_button">Remover Contato</string>
+    <string name="action_export_keys">Exportar Chaves</string>
+    <string name="action_import_keys">Importar Chaves</string>
+    <string name="action_export_contacts">Exportar Contatos</string>
+    <string name="action_import_contacts">Importar Contatos</string>
 
     <string name="contact_name_hint">Nome do Contato</string>
     <string name="public_key_hint">Chave Pública</string>
@@ -57,4 +61,7 @@
     <string name="unlock_button">Desbloquear</string>
     <string name="prompt_for_password_to_decrypt_toast_1">Chave privada desbloqueada</string>
     <string name="prompt_for_password_to_decrypt_toast_2">Falha na descriptografia:</string>
+
+    <string name="menu_group_contacts">Contatos</string>
+    <string name="menu_group_keys">Chaves</string>
 </resources>

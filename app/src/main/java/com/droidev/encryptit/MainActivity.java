@@ -3,7 +3,9 @@ package com.droidev.encryptit;
 import android.app.AlertDialog;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
@@ -23,6 +25,13 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.json.JSONObject;
+import org.json.JSONArray;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -44,13 +53,18 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int REQUEST_EXPORT_KEYS = 1001;
+    private static final int REQUEST_IMPORT_KEYS = 1002;
+    private static final int REQUEST_EXPORT_CONTACTS = 1003;
+    private static final int REQUEST_IMPORT_CONTACTS = 1004;
+
     private EditText messageEditText;
     private AutoCompleteTextView contactAutoComplete;
     private KeyPair keyPair;
     private final Map<String, String> contacts = new HashMap<>();
     private SharedPreferences prefs;
     private PublicKey selectedPublicKey;
-    private PrivateKey runtimePrivateKey; // Decrypted private key for runtime use
+    private PrivateKey runtimePrivateKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
             int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
             view.setPadding(
                     view.getPaddingLeft(),
-                    statusBarHeight, // empurra tudo para baixo da status bar / ilha
+                    statusBarHeight,
                     view.getPaddingRight(),
                     view.getPaddingBottom()
             );
@@ -79,12 +93,10 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences("CryptoPrefs", MODE_PRIVATE);
         initializeKeys();
 
-        // Prompt for password to decrypt private key if it exists
         if (prefs.contains("encryptedPrivateKey")) {
             promptForPasswordToDecrypt();
         }
 
-        // Load contacts from SharedPreferences (excluding key pair entries)
         Map<String, ?> allPrefs = prefs.getAll();
         for (Map.Entry<String, ?> entry : allPrefs.entrySet()) {
             if (!entry.getKey().equals("myPublicKey") && !entry.getKey().equals("encryptedPrivateKey")) {
@@ -92,7 +104,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Setup autocomplete
         updateAutoComplete();
 
         contactAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
@@ -126,26 +137,156 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_remove_contact) {
             showRemoveContactDialog();
             return true;
+        } else if (id == R.id.action_export_keys) {
+            exportKeys();
+            return true;
+        } else if (id == R.id.action_import_keys) {
+            importKeys();
+            return true;
+        } else if (id == R.id.action_export_contacts) {
+            exportContacts();
+            return true;
+        } else if (id == R.id.action_import_contacts) {
+            importContacts();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    private void exportKeys() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "keys.json");
+        startActivityForResult(intent, REQUEST_EXPORT_KEYS);
+    }
+
+    private void importKeys() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        startActivityForResult(intent, REQUEST_IMPORT_KEYS);
+    }
+
+    private void exportContacts() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "contacts.json");
+        startActivityForResult(intent, REQUEST_EXPORT_CONTACTS);
+    }
+
+    private void importContacts() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        startActivityForResult(intent, REQUEST_IMPORT_CONTACTS);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null) return;
+
+        Uri uri = data.getData();
+        if (uri == null) return;
+
+        try {
+            if (requestCode == REQUEST_EXPORT_KEYS) {
+                JSONObject json = new JSONObject();
+                json.put("publicKey", prefs.getString("myPublicKey", ""));
+                json.put("encryptedPrivateKey", prefs.getString("encryptedPrivateKey", ""));
+
+                try (OutputStreamWriter writer = new OutputStreamWriter(
+                        getContentResolver().openOutputStream(uri))) {
+                    writer.write(json.toString(2));
+                    writer.flush();
+                    Toast.makeText(this, "Keys exported successfully", Toast.LENGTH_SHORT).show();
+                }
+            } else if (requestCode == REQUEST_IMPORT_KEYS) {
+                try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                    StringBuilder jsonString = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        jsonString.append(line);
+                    }
+                    JSONObject json = new JSONObject(jsonString.toString());
+
+                    String publicKey = json.getString("publicKey");
+                    String encryptedPrivateKey = json.getString("encryptedPrivateKey");
+
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putString("myPublicKey", publicKey);
+                    editor.putString("encryptedPrivateKey", encryptedPrivateKey);
+                    editor.apply();
+
+                    initializeKeys();
+                    promptForPasswordToDecrypt();
+                    Toast.makeText(this, "Keys imported successfully", Toast.LENGTH_SHORT).show();
+                }
+            } else if (requestCode == REQUEST_EXPORT_CONTACTS) {
+                JSONObject json = new JSONObject();
+                JSONArray contactsArray = new JSONArray();
+                for (Map.Entry<String, String> entry : contacts.entrySet()) {
+                    JSONObject contact = new JSONObject();
+                    contact.put("name", entry.getKey());
+                    contact.put("publicKey", entry.getValue());
+                    contactsArray.put(contact);
+                }
+                json.put("contacts", contactsArray);
+
+                try (OutputStreamWriter writer = new OutputStreamWriter(
+                        getContentResolver().openOutputStream(uri))) {
+                    writer.write(json.toString(2));
+                    writer.flush();
+                    Toast.makeText(this, "Contacts exported successfully", Toast.LENGTH_SHORT).show();
+                }
+            } else if (requestCode == REQUEST_IMPORT_CONTACTS) {
+                try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                    StringBuilder jsonString = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        jsonString.append(line);
+                    }
+                    JSONObject json = new JSONObject(jsonString.toString());
+                    JSONArray contactsArray = json.getJSONArray("contacts");
+
+                    SharedPreferences.Editor editor = prefs.edit();
+                    for (int i = 0; i < contactsArray.length(); i++) {
+                        JSONObject contact = contactsArray.getJSONObject(i);
+                        String name = contact.getString("name");
+                        String publicKey = contact.getString("publicKey");
+                        contacts.put(name, publicKey);
+                        editor.putString(name, publicKey);
+                    }
+                    editor.apply();
+                    updateAutoComplete();
+                    Toast.makeText(this, "Contacts imported successfully", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Operation failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void initializeKeys() {
         if (prefs.contains("myPublicKey") && prefs.contains("encryptedPrivateKey")) {
-            // Load public key (private key will be decrypted later)
             try {
                 String pubKeyBase64 = prefs.getString("myPublicKey", "");
                 byte[] pubKeyBytes = Base64.decode(pubKeyBase64, Base64.DEFAULT);
                 X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(pubKeyBytes);
                 KeyFactory kf = KeyFactory.getInstance("RSA");
                 PublicKey publicKey = kf.generatePublic(pubSpec);
-                keyPair = new KeyPair(publicKey, null); // Private key loaded later
+                keyPair = new KeyPair(publicKey, null);
             } catch (Exception e) {
                 e.printStackTrace();
-                generateRSAKeyPair(); // Fallback to generating new keys
+                generateRSAKeyPair();
             }
         } else {
-            generateRSAKeyPair(); // Generate and save new keys
+            generateRSAKeyPair();
         }
     }
 
@@ -163,12 +304,11 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = builder.create();
         dialog.show();
 
-        // Override the positive button click listener to prevent auto-dismiss
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String password = passwordInput.getText().toString();
             if (password.isEmpty()) {
                 Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_1, Toast.LENGTH_SHORT).show();
-                return; // Dialog won't dismiss
+                return;
             }
 
             try {
@@ -183,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
                 editor.putString("myPublicKey", pubKeyBase64);
                 editor.apply();
 
-                dialog.dismiss(); // Only dismiss when successful
+                dialog.dismiss();
             } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_2 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -192,26 +332,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void encryptAndStorePrivateKey(PrivateKey privateKey, String password) throws Exception {
-        // Generate a random IV
         byte[] iv = new byte[16];
         new SecureRandom().nextBytes(iv);
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
-        // Generate a random salt for PBKDF2
         byte[] salt = new byte[16];
         new SecureRandom().nextBytes(salt);
 
-        // Derive AES key from password using PBKDF2
         PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 10000, 256);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         SecretKey aesKey = new SecretKeySpec(skf.generateSecret(spec).getEncoded(), "AES");
 
-        // Encrypt private key with AES-256-CBC
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
         byte[] encryptedPrivateKey = cipher.doFinal(privateKey.getEncoded());
 
-        // Store IV, salt, and encrypted key
         String storedValue = Base64.encodeToString(iv, Base64.DEFAULT) + ":" +
                 Base64.encodeToString(salt, Base64.DEFAULT) + ":" +
                 Base64.encodeToString(encryptedPrivateKey, Base64.DEFAULT);
@@ -234,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         e.printStackTrace();
                         Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        promptForPasswordToDecrypt(); // Retry on failure
+                        promptForPasswordToDecrypt();
                     }
                 })
                 .setCancelable(false)
@@ -250,17 +385,14 @@ public class MainActivity extends AppCompatActivity {
         byte[] salt = Base64.decode(parts[1], Base64.DEFAULT);
         byte[] encryptedPrivateKey = Base64.decode(parts[2], Base64.DEFAULT);
 
-        // Derive AES key from password using PBKDF2
         PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 10000, 256);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         SecretKey aesKey = new SecretKeySpec(skf.generateSecret(spec).getEncoded(), "AES");
 
-        // Decrypt private key
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
         byte[] decryptedKeyBytes = cipher.doFinal(encryptedPrivateKey);
 
-        // Reconstruct PrivateKey object
         PKCS8EncodedKeySpec privSpec = new PKCS8EncodedKeySpec(decryptedKeyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePrivate(privSpec);
@@ -274,32 +406,26 @@ public class MainActivity extends AppCompatActivity {
         try {
             String message = messageEditText.getText().toString();
 
-            // Generate a random AES key (256-bit)
             byte[] aesKeyBytes = new byte[32];
             new SecureRandom().nextBytes(aesKeyBytes);
             SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-            // Generate a random IV (16 bytes for AES/CBC)
             byte[] ivBytes = new byte[16];
             new SecureRandom().nextBytes(ivBytes);
             IvParameterSpec iv = new IvParameterSpec(ivBytes);
 
-            // Encrypt the message with AES/CBC
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, iv);
             byte[] encryptedMessage = aesCipher.doFinal(message.getBytes());
 
-            // Encrypt the AES key with RSA
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipher.init(Cipher.ENCRYPT_MODE, selectedPublicKey);
             byte[] encryptedAesKey = rsaCipher.doFinal(aesKeyBytes);
 
-            // Combine encrypted key, IV, and message (Base64 encoded)
             String encryptedText = Base64.encodeToString(encryptedAesKey, Base64.DEFAULT) + ":" +
                     Base64.encodeToString(ivBytes, Base64.DEFAULT) + ":" +
                     Base64.encodeToString(encryptedMessage, Base64.DEFAULT);
 
-            // Copy encrypted text to clipboard
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             clipboard.setText(encryptedText);
             Toast.makeText(this, R.string.encrypted_message_copied_to_clipboard_toast, Toast.LENGTH_SHORT).show();
@@ -325,18 +451,15 @@ public class MainActivity extends AppCompatActivity {
                 throw new IllegalArgumentException("Invalid encrypted message format");
             }
 
-            // Extract encrypted AES key, IV, and message
             byte[] encryptedAesKey = Base64.decode(parts[0], Base64.DEFAULT);
             byte[] ivBytes = Base64.decode(parts[1], Base64.DEFAULT);
             byte[] encryptedMessage = Base64.decode(parts[2], Base64.DEFAULT);
 
-            // Decrypt the AES key with RSA
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipher.init(Cipher.DECRYPT_MODE, runtimePrivateKey);
             byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
             SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-            // Decrypt the message with AES/CBC
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             IvParameterSpec iv = new IvParameterSpec(ivBytes);
             aesCipher.init(Cipher.DECRYPT_MODE, aesKey, iv);

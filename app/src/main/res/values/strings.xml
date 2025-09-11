@@ -9,6 +9,10 @@
     <string name="show_keys_menu_button">Show My Public Key</string>
     <string name="add_contact_menu_button">Add Contact</string>
     <string name="remove_contact_menu_button">Remove Contact</string>
+    <string name="action_export_keys">Export Keys</string>
+    <string name="action_import_keys">Import Keys</string>
+    <string name="action_export_contacts">Export Contacts</string>
+    <string name="action_import_contacts">Import Contacts</string>
 
     <string name="contact_name_hint">Contact Name</string>
     <string name="public_key_hint">Public Key</string>
@@ -57,4 +61,7 @@
     <string name="unlock_button">Unlock</string>
     <string name="prompt_for_password_to_decrypt_toast_1">Private key unlocked</string>
     <string name="prompt_for_password_to_decrypt_toast_2">Decryption failed:</string>
+
+    <string name="menu_group_contacts">Contacts</string>
+    <string name="menu_group_keys">Keys</string>
 </resources>
