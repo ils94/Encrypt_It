@@ -41,4 +41,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Download
 
-[Download Encrypt It](https://github.com/ils94/Encrypt_It/releases/download/v2/Encrypt-It-v2.apk)
+[Download Encrypt It](https://github.com/ils94/Encrypt_It/releases/download/v3/Encrypt-It-v3.apk)
