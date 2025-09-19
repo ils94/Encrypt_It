@@ -68,4 +68,8 @@
     <string name="menu_group_files">Files</string>
     <string name="action_encrypt_file">Encrypt File</string>
     <string name="action_decrypt_file">Decrypt File</string>
+
+    <string name="menu_group_messages">Messages</string>
+    <string name="action_sign_message">Sign Message</string>
+    <string name="action_verify_message">Verify Message</string>
 </resources>

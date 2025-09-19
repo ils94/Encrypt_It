@@ -68,4 +68,8 @@
     <string name="menu_group_files">Arquivos</string>
     <string name="action_encrypt_file">Criptografar Arquivo</string>
     <string name="action_decrypt_file">Descriptografar Arquivo</string>
+
+    <string name="menu_group_messages">Mensagens</string>
+    <string name="action_sign_message">Assinar Mensagem</string>
+    <string name="action_verify_message">Verificar Mensagem</string>
 </resources>

@@ -32,6 +32,7 @@ import java.io.OutputStream;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -156,6 +157,12 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } else if (id == R.id.action_decrypt_file) {
             pickFileToDecrypt();
+            return true;
+        } else if (id == R.id.action_sign_message) {
+            signMessage();
+            return true;
+        } else if (id == R.id.action_verify_message) {
+            verifyMessage();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -696,5 +703,130 @@ public class MainActivity extends AppCompatActivity {
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(spec);
+    }
+
+    private void signMessage() {
+        if (runtimePrivateKey == null) {
+            Toast.makeText(this, "Chave privada não desbloqueada!", Toast.LENGTH_SHORT).show();
+            if (prefs.contains("encryptedPrivateKey")) {
+                promptForPasswordToDecrypt();
+            }
+            return;
+        }
+
+        String message = messageEditText.getText().toString();
+        if (message.isEmpty()) {
+            Toast.makeText(this, "Digite uma mensagem para assinar!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            // Calcular o hash da mensagem
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] messageHash = digest.digest(message.getBytes("UTF-8"));
+
+            // Assinar o hash com a chave privada
+            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            rsaCipher.init(Cipher.ENCRYPT_MODE, runtimePrivateKey);
+            byte[] signature = rsaCipher.doFinal(messageHash);
+
+            // Codificar a assinatura em Base64
+            String signatureBase64 = Base64.encodeToString(signature, Base64.DEFAULT);
+
+            // Formato com boundaries RSA-AES256: mensagem delimitada, assinatura em bloco separado
+            String result = "-----BEGIN RSA-AES256 SIGNED MESSAGE-----\n\n" +
+                    message + "\n\n" +
+                    "-----END RSA-AES256 SIGNED MESSAGE-----\n\n" +
+                    "-----BEGIN RSA-AES256 SIGNATURE-----\n\n" +
+                    signatureBase64 + "\n\n" +
+                    "-----END RSA-AES256 SIGNATURE-----";
+
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            clipboard.setText(result);
+            Toast.makeText(this, "Mensagem assinada copiada!", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Falha ao assinar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void verifyMessage() {
+        if (selectedPublicKey == null) {
+            Toast.makeText(this, "Selecione um contato primeiro!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        EditText input = new EditText(this);
+        input.setHint("Cole o texto assinado (formato RSA-AES256)");
+        input.setSingleLine(false);
+        input.setLines(10);  // Permite múltiplas linhas para colar o bloco completo
+        builder.setView(input)
+                .setTitle("Verificar Assinatura")
+                .setPositiveButton("Verificar", (dialog, which) -> {
+                    String fullInput = input.getText().toString().trim();
+                    if (fullInput.isEmpty()) {
+                        Toast.makeText(this, "Preencha o campo!", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    try {
+                        // Extrair mensagem: entre -----BEGIN RSA-AES256 SIGNED MESSAGE----- e -----END RSA-AES256 SIGNED MESSAGE-----
+                        String beginSigned = "-----BEGIN RSA-AES256 SIGNED MESSAGE-----";
+                        String endSigned = "-----END RSA-AES256 SIGNED MESSAGE-----";
+                        int beginIdx = fullInput.indexOf(beginSigned);
+                        int endIdx = fullInput.indexOf(endSigned);
+                        if (beginIdx == -1 || endIdx == -1 || endIdx <= beginIdx) {
+                            Toast.makeText(this, "Formato inválido! Use o formato RSA-AES256 com boundaries.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        int messageStart = beginIdx + beginSigned.length() + 2;  // +2 para \n\n
+                        int messageEnd = endIdx - 2;  // -2 para \n\n antes do end
+                        String message = fullInput.substring(messageStart, messageEnd).trim();
+
+                        // Extrair assinatura: entre -----BEGIN RSA-AES256 SIGNATURE----- e -----END RSA-AES256 SIGNATURE-----
+                        String beginSig = "-----BEGIN RSA-AES256 SIGNATURE-----";
+                        String endSig = "-----END RSA-AES256 SIGNATURE-----";
+                        beginIdx = fullInput.indexOf(beginSig);
+                        endIdx = fullInput.indexOf(endSig);
+                        if (beginIdx == -1 || endIdx == -1 || endIdx <= beginIdx) {
+                            Toast.makeText(this, "Formato inválido! Assinatura não encontrada.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        int sigStart = beginIdx + beginSig.length() + 2;  // +2 para \n\n
+                        int sigEnd = endIdx - 2;  // -2 para \n\n antes do end
+                        String signatureBase64 = fullInput.substring(sigStart, sigEnd).trim();
+
+                        if (message.isEmpty() || signatureBase64.isEmpty()) {
+                            Toast.makeText(this, "Mensagem ou assinatura vazia após extração!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // Calcular o hash da mensagem
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        byte[] messageHash = digest.digest(message.getBytes("UTF-8"));
+
+                        // Decodificar a assinatura
+                        byte[] signature = Base64.decode(signatureBase64, Base64.DEFAULT);
+
+                        // Verificar a assinatura com a chave pública
+                        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                        rsaCipher.init(Cipher.DECRYPT_MODE, selectedPublicKey);
+                        byte[] decryptedHash = rsaCipher.doFinal(signature);
+
+                        // Comparar os hashes
+                        if (MessageDigest.isEqual(messageHash, decryptedHash)) {
+                            Toast.makeText(this, "Assinatura válida! Remetente confirmado.\n\nMensagem: " + message, Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(this, "Assinatura inválida! Remetente não confirmado.", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(this, "Erro na verificação: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .setCancelable(true)
+                .show();
     }
 }

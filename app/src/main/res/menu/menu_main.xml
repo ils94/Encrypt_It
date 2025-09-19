@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -45,5 +46,17 @@
         </menu>
     </item>
 
+    <item android:title="@string/menu_group_messages">
+        <menu>
+            <item
+                android:id="@+id/action_sign_message"
+                android:title="@string/action_sign_message"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/action_verify_message"
+                android:title="@string/action_verify_message"
+                app:showAsAction="never" />
+        </menu>
+    </item>
 
 </menu>
