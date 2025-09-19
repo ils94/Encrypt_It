@@ -293,15 +293,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void encryptFile(Uri sourceUri, Uri destUri) throws Exception {
+        byte[] aesKeyBytes = new byte[32]; // 256-bit AES key
+        new SecureRandom().nextBytes(aesKeyBytes);
+        SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+        byte[] ivBytes = new byte[16];
+        new SecureRandom().nextBytes(ivBytes);
+        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        rsaCipher.init(Cipher.ENCRYPT_MODE, selectedPublicKey);
+        byte[] encryptedAesKey = rsaCipher.doFinal(aesKeyBytes);
+
+        Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, iv);
+
         try (InputStream in = getContentResolver().openInputStream(sourceUri);
              OutputStream out = getContentResolver().openOutputStream(destUri)) {
+
+            out.write(encryptedAesKey.length >> 8);
+            out.write(encryptedAesKey.length);
+            out.write(encryptedAesKey);
+
+            out.write(ivBytes);
+
             byte[] buffer = new byte[4096];
             int len;
-            while (true) {
-                assert in != null;
-                if ((len = in.read(buffer)) == -1) break;
-                assert out != null;
-                out.write(buffer, 0, len);
+            while ((len = in.read(buffer)) != -1) {
+                byte[] encryptedData = aesCipher.update(buffer, 0, len);
+                if (encryptedData != null) {
+                    out.write(encryptedData);
+                }
+            }
+
+            byte[] finalData = aesCipher.doFinal();
+            if (finalData != null) {
+                out.write(finalData);
             }
         }
     }
@@ -309,13 +336,36 @@ public class MainActivity extends AppCompatActivity {
     private void decryptFile(Uri sourceUri, Uri destUri) throws Exception {
         try (InputStream in = getContentResolver().openInputStream(sourceUri);
              OutputStream out = getContentResolver().openOutputStream(destUri)) {
+
+            int keyLength = ((in.read() & 0xFF) << 8) | (in.read() & 0xFF);
+
+            byte[] encryptedAesKey = new byte[keyLength];
+            in.read(encryptedAesKey);
+
+            byte[] ivBytes = new byte[16];
+            in.read(ivBytes);
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            rsaCipher.init(Cipher.DECRYPT_MODE, runtimePrivateKey);
+            byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
+            SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+            Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            aesCipher.init(Cipher.DECRYPT_MODE, aesKey, iv);
+
             byte[] buffer = new byte[4096];
             int len;
-            while (true) {
-                assert in != null;
-                if ((len = in.read(buffer)) == -1) break;
-                assert out != null;
-                out.write(buffer, 0, len);
+            while ((len = in.read(buffer)) != -1) {
+                byte[] decryptedData = aesCipher.update(buffer, 0, len);
+                if (decryptedData != null) {
+                    out.write(decryptedData);
+                }
+            }
+
+            byte[] finalData = aesCipher.doFinal();
+            if (finalData != null) {
+                out.write(finalData);
             }
         }
     }
