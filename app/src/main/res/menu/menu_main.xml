@@ -32,4 +32,18 @@
         </menu>
     </item>
 
+    <item android:title="@string/menu_group_files">
+        <menu>
+            <item
+                android:id="@+id/action_encrypt_file"
+                android:title="@string/action_encrypt_file"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/action_decrypt_file"
+                android:title="@string/action_decrypt_file"
+                app:showAsAction="never" />
+        </menu>
+    </item>
+
+
 </menu>

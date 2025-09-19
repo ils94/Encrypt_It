@@ -64,4 +64,8 @@
 
     <string name="menu_group_contacts">Contatos</string>
     <string name="menu_group_keys">Chaves</string>
+
+    <string name="menu_group_files">Arquivos</string>
+    <string name="action_encrypt_file">Criptografar Arquivo</string>
+    <string name="action_decrypt_file">Descriptografar Arquivo</string>
 </resources>

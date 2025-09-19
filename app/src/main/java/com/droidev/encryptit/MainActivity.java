@@ -5,8 +5,10 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
 import android.view.Menu;
@@ -25,13 +27,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -53,10 +50,15 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
+    private Uri pendingSourceUri = null;
+    private boolean pendingEncrypt = false;
     private static final int REQUEST_EXPORT_KEYS = 1001;
     private static final int REQUEST_IMPORT_KEYS = 1002;
     private static final int REQUEST_EXPORT_CONTACTS = 1003;
     private static final int REQUEST_IMPORT_CONTACTS = 1004;
+
+    private static final int REQUEST_ENCRYPT_FILE = 2001;
+    private static final int REQUEST_DECRYPT_FILE = 2002;
 
     private EditText messageEditText;
     private AutoCompleteTextView contactAutoComplete;
@@ -149,8 +151,28 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_import_contacts) {
             importContacts();
             return true;
+        } else if (id == R.id.action_encrypt_file) {
+            pickFileToEncrypt();
+            return true;
+        } else if (id == R.id.action_decrypt_file) {
+            pickFileToDecrypt();
+            return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void pickFileToEncrypt() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, REQUEST_ENCRYPT_FILE);
+    }
+
+    private void pickFileToDecrypt() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, REQUEST_DECRYPT_FILE);
     }
 
     private void exportKeys() {
@@ -192,83 +214,109 @@ public class MainActivity extends AppCompatActivity {
         if (uri == null) return;
 
         try {
-            if (requestCode == REQUEST_EXPORT_KEYS) {
-                JSONObject json = new JSONObject();
-                json.put("publicKey", prefs.getString("myPublicKey", ""));
-                json.put("encryptedPrivateKey", prefs.getString("encryptedPrivateKey", ""));
-
-                try (OutputStreamWriter writer = new OutputStreamWriter(
-                        getContentResolver().openOutputStream(uri))) {
-                    writer.write(json.toString(2));
-                    writer.flush();
-                    Toast.makeText(this, "Keys exported successfully", Toast.LENGTH_SHORT).show();
+            if (requestCode == REQUEST_ENCRYPT_FILE) {
+                if (selectedPublicKey == null) {
+                    Toast.makeText(this, "Select a contact first!", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-            } else if (requestCode == REQUEST_IMPORT_KEYS) {
-                try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                    StringBuilder jsonString = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        jsonString.append(line);
-                    }
-                    JSONObject json = new JSONObject(jsonString.toString());
+                pendingSourceUri = uri;
+                pendingEncrypt = true;
 
-                    String publicKey = json.getString("publicKey");
-                    String encryptedPrivateKey = json.getString("encryptedPrivateKey");
+                String originalName = getFileName(this, uri);
+                String encryptedName = originalName + ".enc";
 
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.putString("myPublicKey", publicKey);
-                    editor.putString("encryptedPrivateKey", encryptedPrivateKey);
-                    editor.apply();
+                Intent createIntent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                createIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                createIntent.setType("application/octet-stream");
+                createIntent.putExtra(Intent.EXTRA_TITLE, encryptedName);
+                startActivityForResult(createIntent, REQUEST_ENCRYPT_FILE + 100);
 
-                    initializeKeys();
-                    promptForPasswordToDecrypt();
-                    Toast.makeText(this, "Keys imported successfully", Toast.LENGTH_SHORT).show();
+            } else if (requestCode == REQUEST_ENCRYPT_FILE + 100) {
+                if (pendingSourceUri != null && pendingEncrypt) {
+                    encryptFile(pendingSourceUri, uri);
+                    Toast.makeText(this, "File encrypted", Toast.LENGTH_SHORT).show();
                 }
-            } else if (requestCode == REQUEST_EXPORT_CONTACTS) {
-                JSONObject json = new JSONObject();
-                JSONArray contactsArray = new JSONArray();
-                for (Map.Entry<String, String> entry : contacts.entrySet()) {
-                    JSONObject contact = new JSONObject();
-                    contact.put("name", entry.getKey());
-                    contact.put("publicKey", entry.getValue());
-                    contactsArray.put(contact);
-                }
-                json.put("contacts", contactsArray);
+                pendingSourceUri = null;
+                pendingEncrypt = false;
 
-                try (OutputStreamWriter writer = new OutputStreamWriter(
-                        getContentResolver().openOutputStream(uri))) {
-                    writer.write(json.toString(2));
-                    writer.flush();
-                    Toast.makeText(this, "Contacts exported successfully", Toast.LENGTH_SHORT).show();
+            } else if (requestCode == REQUEST_DECRYPT_FILE) {
+                if (runtimePrivateKey == null) {
+                    Toast.makeText(this, "Unlock private key first!", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-            } else if (requestCode == REQUEST_IMPORT_CONTACTS) {
-                try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                    StringBuilder jsonString = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        jsonString.append(line);
-                    }
-                    JSONObject json = new JSONObject(jsonString.toString());
-                    JSONArray contactsArray = json.getJSONArray("contacts");
+                pendingSourceUri = uri;
+                pendingEncrypt = false;
 
-                    SharedPreferences.Editor editor = prefs.edit();
-                    for (int i = 0; i < contactsArray.length(); i++) {
-                        JSONObject contact = contactsArray.getJSONObject(i);
-                        String name = contact.getString("name");
-                        String publicKey = contact.getString("publicKey");
-                        contacts.put(name, publicKey);
-                        editor.putString(name, publicKey);
-                    }
-                    editor.apply();
-                    updateAutoComplete();
-                    Toast.makeText(this, "Contacts imported successfully", Toast.LENGTH_SHORT).show();
+                String originalName = getFileName(this, uri);
+                String decryptedName;
+                if (originalName.endsWith(".enc")) {
+                    decryptedName = originalName.substring(0, originalName.length() - 4);
+                } else {
+                    decryptedName = "decrypted_" + originalName;
                 }
+
+                Intent createIntent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                createIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                createIntent.setType("application/octet-stream");
+                createIntent.putExtra(Intent.EXTRA_TITLE, decryptedName);
+                startActivityForResult(createIntent, REQUEST_DECRYPT_FILE + 100);
+
+            } else if (requestCode == REQUEST_DECRYPT_FILE + 100) {
+                if (pendingSourceUri != null && !pendingEncrypt) {
+                    decryptFile(pendingSourceUri, uri);
+                    Toast.makeText(this, "File decrypted", Toast.LENGTH_SHORT).show();
+                }
+                pendingSourceUri = null;
             }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Operation failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String getFileName(Context context, Uri uri) {
+        String result = null;
+        if ("content".equals(uri.getScheme())) {
+            try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (index != -1) {
+                        result = cursor.getString(index);
+                    }
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.getLastPathSegment();
+        }
+        return result;
+    }
+
+    private void encryptFile(Uri sourceUri, Uri destUri) throws Exception {
+        try (InputStream in = getContentResolver().openInputStream(sourceUri);
+             OutputStream out = getContentResolver().openOutputStream(destUri)) {
+            byte[] buffer = new byte[4096];
+            int len;
+            while (true) {
+                assert in != null;
+                if ((len = in.read(buffer)) == -1) break;
+                assert out != null;
+                out.write(buffer, 0, len);
+            }
+        }
+    }
+
+    private void decryptFile(Uri sourceUri, Uri destUri) throws Exception {
+        try (InputStream in = getContentResolver().openInputStream(sourceUri);
+             OutputStream out = getContentResolver().openOutputStream(destUri)) {
+            byte[] buffer = new byte[4096];
+            int len;
+            while (true) {
+                assert in != null;
+                if ((len = in.read(buffer)) == -1) break;
+                assert out != null;
+                out.write(buffer, 0, len);
+            }
         }
     }
 
