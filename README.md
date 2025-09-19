@@ -12,7 +12,8 @@ A simple Android application for secure text and file encryption and decryption 
 -   **Key Persistence:** Stores your RSA key pair and contact public keys in `SharedPreferences`.
 -   **User-Friendly UI:** Simple interface with an `EditText` for messages, buttons for encryption/decryption, and a dropdown for contact selection.
 -   **Encrypted Private Key:** The user's private key is encrypted and saved locally. The user must use the same password to decrypt their private key in order to use the app.
-- **File Encryption and Decryption:** Encrypt a file using your contact's public key so that only they can decrypt it with their private key.
+-   **File Encryption and Decryption:** Encrypt a file using your contact's public key so that only they can decrypt it with their private key.
+-   **Sign and Verify Messages:** Digitally sign your messages with your private key and verify messages from contacts using their public keys.
 
 ## Usage
 
@@ -49,5 +50,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Download
 
-[Download Encrypt It](https://github.com/ils94/Encrypt_It/releases/download/v5/Encrypt-It-v5.apk)
-
+[Download Encrypt It](https://github.com/ils94/Encrypt_It/releases/download/v6/Encrypt-It-v6.apk)
