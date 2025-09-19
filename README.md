@@ -1,6 +1,6 @@
 # Encrypt It
 
-A simple Android application for secure text encryption and decryption using a hybrid RSA/AES encryption scheme. Encrypt It allows users to encrypt messages with a contact's public key so they can decrypt it with their private key, ensuring secure communication.
+A simple Android application for secure text and file encryption and decryption using a hybrid RSA/AES encryption scheme. Encrypt It allows users to encrypt messages with a contact's public key so they can decrypt it with their private key, ensuring secure communication.
 
 ## Features
 
