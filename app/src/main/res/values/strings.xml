@@ -37,7 +37,7 @@
 
     <string name="public_key_alertdialog_error_title">Error</string>
     <string name="public_key_alertdialog_error_message">Key pair not initialized!</string>
-    <string name="public_key_alertdialog_error_ok">Ok</string>
+    <string name="public_key_alertdialog_error_ok">OK</string>
 
     <string name="public_key_alertdialog_title">My Public Key</string>
     <string name="public_key_alertdialog_copy_button">Copy</string>
@@ -69,7 +69,29 @@
     <string name="action_encrypt_file">Encrypt File</string>
     <string name="action_decrypt_file">Decrypt File</string>
 
-    <string name="menu_group_messages">Messages</string>
+    <string name="menu_group_messages">Message</string>
     <string name="action_sign_message">Sign Message</string>
     <string name="action_verify_message">Verify Message</string>
+
+    <string name="private_key_not_unlocked">Private key not unlocked!</string>
+    <string name="enter_message_to_sign">Enter a message to sign!</string>
+    <string name="signed_message_copied">Signed message copied!</string>
+    <string name="signing_failed">Failed to sign.</string>
+    <string name="select_contact_first">Select a contact first!</string>
+    <string name="paste_signed_message">Paste a signed message in the text field!</string>
+    <string name="invalid_format_rsa_aes256">Invalid format! Use RSA-AES256 format with boundaries.</string>
+    <string name="signature_not_found">Invalid format! Signature not found.</string>
+    <string name="empty_message_or_signature">Empty message or signature after extraction!</string>
+    <string name="valid_signature">Valid signature! Sender confirmed.</string>
+    <string name="invalid_signature">Invalid signature! Sender not confirmed.</string>
+    <string name="verification_error">Verification error.</string>
+    <string name="message_field_empty">The message field is already empty!</string>
+    <string name="clear_message_title">Clear Message</string>
+    <string name="clear_message_confirm">Are you sure you want to clear the message text?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="action_clear_message">Clear Text</string>
+
+    <string name="encrypted_file">File encrypted.</string>
+    <string name="decrypted_file">File decrypted.</string>
 </resources>

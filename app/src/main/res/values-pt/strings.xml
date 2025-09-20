@@ -37,7 +37,7 @@
 
     <string name="public_key_alertdialog_error_title">Erro</string>
     <string name="public_key_alertdialog_error_message">Par de chaves não inicializado!</string>
-    <string name="public_key_alertdialog_error_ok">Ok</string>
+    <string name="public_key_alertdialog_error_ok">OK</string>
 
     <string name="public_key_alertdialog_title">Minha Chave Pública</string>
     <string name="public_key_alertdialog_copy_button">Copiar</string>
@@ -46,7 +46,7 @@
 
     <string name="key_generation_failed_toast">Falha na geração da chave:</string>
     <string name="select_a_contact_first_toast">Selecione um contato primeiro!</string>
-    <string name="decryption_failed_toast">Falha na descriptografia:</string>
+    <string name="decryption_failed_toast">Falha na descriptografia.</string>
     <string name="no_contacts_to_remove_toast">Nenhum contato para remover!</string>
     <string name="encrypted_message_copied_to_clipboard_toast">Mensagem criptografada copiada para a área de transferência!</string>
     <string name="encryption_failed_toast">Falha na criptografia:</string>
@@ -69,7 +69,29 @@
     <string name="action_encrypt_file">Criptografar Arquivo</string>
     <string name="action_decrypt_file">Descriptografar Arquivo</string>
 
-    <string name="menu_group_messages">Mensagens</string>
+    <string name="menu_group_messages">Mensagem</string>
     <string name="action_sign_message">Assinar Mensagem</string>
     <string name="action_verify_message">Verificar Mensagem</string>
+
+    <string name="private_key_not_unlocked">Chave privada não desbloqueada!</string>
+    <string name="enter_message_to_sign">Digite uma mensagem para assinar!</string>
+    <string name="signed_message_copied">Mensagem assinada copiada!</string>
+    <string name="signing_failed">Falha ao assinar.</string>
+    <string name="select_contact_first">Selecione um contato primeiro!</string>
+    <string name="paste_signed_message">Cole uma mensagem assinada no campo de texto!</string>
+    <string name="invalid_format_rsa_aes256">Formato inválido! Use o formato RSA-AES256 com boundaries.</string>
+    <string name="signature_not_found">Formato inválido! Assinatura não encontrada.</string>
+    <string name="empty_message_or_signature">Mensagem ou assinatura vazia após extração!</string>
+    <string name="valid_signature">Assinatura válida! Remetente confirmado.</string>
+    <string name="invalid_signature">Assinatura inválida! Remetente não confirmado.</string>
+    <string name="verification_error">Erro na verificação.</string>
+    <string name="message_field_empty">O campo de mensagem já está vazio!</string>
+    <string name="clear_message_title">Limpar Mensagem</string>
+    <string name="clear_message_confirm">Tem certeza que deseja limpar o texto da mensagem?</string>
+    <string name="yes">Sim</string>
+    <string name="no">Não</string>
+    <string name="action_clear_message">Limpar Texto</string>
+
+    <string name="encrypted_file">Arquivo criptografado.</string>
+    <string name="decrypted_file">Arquivo descriptografado.</string>
 </resources>

@@ -56,6 +56,10 @@
                 android:id="@+id/action_verify_message"
                 android:title="@string/action_verify_message"
                 app:showAsAction="never" />
+            <item
+                android:id="@+id/action_clear_message"
+                android:title="@string/action_clear_message"
+                app:showAsAction="never" />
         </menu>
     </item>
 
