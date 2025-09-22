@@ -2,7 +2,7 @@
     <string name="app_name">Encrypt It</string>
 
     <string name="select_contact_hint">Digite o nome do contato</string>
-    <string name="edit_text_hint">Digite a mensagem ou cole o texto criptografado</string>
+    <string name="edit_text_hint">Digite sua mensagem ou cole um texto criptografado. Toque 3 vezes aqui para colar e descriptografar rapidamente.</string>
     <string name="encrypt_button">Criptografar</string>
     <string name="decrypt_button">Descriptografar</string>
 
@@ -94,4 +94,7 @@
 
     <string name="encrypted_file">Arquivo criptografado.</string>
     <string name="decrypted_file">Arquivo descriptografado.</string>
+
+    <string name="cannot_paste_message_field_not_empty">Não é possível colar: Campo de mensagem não está vazio</string>
+    <string name="clipboard_empty">Área de transferência está vazia</string>
 </resources>

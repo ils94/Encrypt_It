@@ -1,5 +1,6 @@
 package com.droidev.encryptit;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -11,8 +12,10 @@ import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
@@ -42,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -69,6 +73,10 @@ public class MainActivity extends AppCompatActivity {
     private PublicKey selectedPublicKey;
     private PrivateKey runtimePrivateKey;
 
+    private static int tapCount = 0;
+    private static long lastTapTime = 0;
+    private static final long TRIPLE_TAP_TIMEOUT = 1000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,6 +100,8 @@ public class MainActivity extends AppCompatActivity {
         contactAutoComplete = findViewById(R.id.contactAutoComplete);
         Button encryptButton = findViewById(R.id.encryptButton);
         Button decryptButton = findViewById(R.id.decryptButton);
+
+        setupTripleTapListener();
 
         prefs = getSharedPreferences("CryptoPrefs", MODE_PRIVATE);
         initializeKeys();
@@ -120,6 +130,50 @@ public class MainActivity extends AppCompatActivity {
 
         encryptButton.setOnClickListener(v -> encryptMessage());
         decryptButton.setOnClickListener(v -> decryptMessage());
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupTripleTapListener() {
+        messageEditText.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                long currentTime = System.currentTimeMillis();
+
+                if (currentTime - lastTapTime > TRIPLE_TAP_TIMEOUT) {
+                    tapCount = 0;
+                }
+
+                tapCount++;
+                lastTapTime = currentTime;
+
+                if (tapCount == 3) {
+
+                    handleTripleTap();
+                    tapCount = 0;
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    private void handleTripleTap() {
+        if (!messageEditText.getText().toString().isEmpty()) {
+            Toast.makeText(this, R.string.cannot_paste_message_field_not_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard.hasPrimaryClip() && Objects.requireNonNull(clipboard.getPrimaryClip()).getItemCount() > 0) {
+            CharSequence pastedText = clipboard.getPrimaryClip().getItemAt(0).getText();
+            if (pastedText != null && !pastedText.toString().isEmpty()) {
+                messageEditText.setText(pastedText);
+                decryptMessage();
+            } else {
+                Toast.makeText(this, R.string.clipboard_empty, Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, R.string.clipboard_empty, Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
