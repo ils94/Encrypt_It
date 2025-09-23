@@ -94,6 +94,9 @@
 
     <string name="encrypted_file">Arquivo criptografado.</string>
     <string name="decrypted_file">Arquivo descriptografado.</string>
+    <string name="please_wait">Porfavor aguarde…</string>
+    <string name="decrypting_file">Descriptografando arquivo…</string>
+    <string name="encrypting_file">Criptografando arquivo…</string>
 
     <string name="cannot_paste_message_field_not_empty">Não é possível colar: Campo de mensagem não está vazio</string>
     <string name="clipboard_empty">Área de transferência está vazia</string>

@@ -94,6 +94,9 @@
 
     <string name="encrypted_file">File encrypted.</string>
     <string name="decrypted_file">File decrypted.</string>
+    <string name="please_wait">Please wait…</string>
+    <string name="decrypting_file">Decrypting File…</string>
+    <string name="encrypting_file">Encrypting File…</string>
 
     <string name="cannot_paste_message_field_not_empty">Cannot paste: Message field is not empty</string>
     <string name="clipboard_empty">Clipboard is empty</string>

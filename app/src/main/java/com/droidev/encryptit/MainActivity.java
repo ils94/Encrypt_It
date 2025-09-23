@@ -2,17 +2,18 @@ package com.droidev.encryptit;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
-import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -32,6 +33,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -64,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENCRYPT_FILE = 2001;
     private static final int REQUEST_DECRYPT_FILE = 2002;
+
+    private ProgressDialog progressDialog;
 
     private EditText messageEditText;
     private AutoCompleteTextView contactAutoComplete;
@@ -100,6 +104,10 @@ public class MainActivity extends AppCompatActivity {
         contactAutoComplete = findViewById(R.id.contactAutoComplete);
         Button encryptButton = findViewById(R.id.encryptButton);
         Button decryptButton = findViewById(R.id.decryptButton);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setCancelable(false);
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 
         setupTripleTapListener();
 
@@ -297,8 +305,7 @@ public class MainActivity extends AppCompatActivity {
 
             } else if (requestCode == REQUEST_ENCRYPT_FILE + 100) {
                 if (pendingSourceUri != null && pendingEncrypt) {
-                    encryptFile(pendingSourceUri, uri);
-                    Toast.makeText(this, getString(R.string.encrypted_file), Toast.LENGTH_SHORT).show();
+                    new EncryptFileTask().execute(pendingSourceUri, uri);
                 }
                 pendingSourceUri = null;
                 pendingEncrypt = false;
@@ -327,14 +334,13 @@ public class MainActivity extends AppCompatActivity {
 
             } else if (requestCode == REQUEST_DECRYPT_FILE + 100) {
                 if (pendingSourceUri != null && !pendingEncrypt) {
-                    decryptFile(pendingSourceUri, uri);
-                    Toast.makeText(this, getString(R.string.decrypted_file), Toast.LENGTH_SHORT).show();
+                    new DecryptFileTask().execute(pendingSourceUri, uri);
                 }
                 pendingSourceUri = null;
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Operation failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Operation failed", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -356,83 +362,187 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    private void encryptFile(Uri sourceUri, Uri destUri) throws Exception {
-        byte[] aesKeyBytes = new byte[32]; // 256-bit AES key
-        new SecureRandom().nextBytes(aesKeyBytes);
-        SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
-
-        byte[] ivBytes = new byte[16];
-        new SecureRandom().nextBytes(ivBytes);
-        IvParameterSpec iv = new IvParameterSpec(ivBytes);
-
-        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        rsaCipher.init(Cipher.ENCRYPT_MODE, selectedPublicKey);
-        byte[] encryptedAesKey = rsaCipher.doFinal(aesKeyBytes);
-
-        Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, iv);
-
-        try (InputStream in = getContentResolver().openInputStream(sourceUri);
-             OutputStream out = getContentResolver().openOutputStream(destUri)) {
-
-            out.write(encryptedAesKey.length >> 8);
-            out.write(encryptedAesKey.length);
-            out.write(encryptedAesKey);
-
-            out.write(ivBytes);
-
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = in.read(buffer)) != -1) {
-                byte[] encryptedData = aesCipher.update(buffer, 0, len);
-                if (encryptedData != null) {
-                    out.write(encryptedData);
+    private long getFileSize(Context context, Uri uri) {
+        try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                if (sizeIndex != -1) {
+                    return cursor.getLong(sizeIndex);
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
 
-            byte[] finalData = aesCipher.doFinal();
-            if (finalData != null) {
-                out.write(finalData);
+    @SuppressLint("StaticFieldLeak")
+    private class EncryptFileTask extends AsyncTask<Uri, Integer, Exception> {
+        @Override
+        protected void onPreExecute() {
+            progressDialog.setTitle(getString(R.string.encrypting_file));
+            progressDialog.setMessage(getString(R.string.please_wait));
+            progressDialog.setMax(100);
+            progressDialog.setProgress(0);
+            progressDialog.show();
+        }
+
+        @Override
+        protected Exception doInBackground(Uri... uris) {
+            Uri sourceUri = uris[0];
+            Uri destUri = uris[1];
+            try {
+                byte[] aesKeyBytes = new byte[32];
+                new SecureRandom().nextBytes(aesKeyBytes);
+                SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+                byte[] ivBytes = new byte[16];
+                new SecureRandom().nextBytes(ivBytes);
+                IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+                Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                rsaCipher.init(Cipher.ENCRYPT_MODE, selectedPublicKey);
+                byte[] encryptedAesKey = rsaCipher.doFinal(aesKeyBytes);
+
+                Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                aesCipher.init(Cipher.ENCRYPT_MODE, aesKey, iv);
+
+                long totalSize = getFileSize(MainActivity.this, sourceUri);
+                long bytesProcessed = 0;
+
+                try (InputStream in = getContentResolver().openInputStream(sourceUri);
+                     OutputStream out = getContentResolver().openOutputStream(destUri)) {
+                    assert out != null;
+                    out.write(encryptedAesKey.length >> 8);
+                    out.write(encryptedAesKey.length);
+                    out.write(encryptedAesKey);
+                    out.write(ivBytes);
+
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while (true) {
+                        assert in != null;
+                        if ((len = in.read(buffer)) == -1) break;
+                        byte[] encryptedData = aesCipher.update(buffer, 0, len);
+                        if (encryptedData != null) {
+                            out.write(encryptedData);
+                        }
+                        bytesProcessed += len;
+                        if (totalSize > 0) {
+                            publishProgress((int) ((bytesProcessed * 100) / totalSize));
+                        }
+                    }
+
+                    byte[] finalData = aesCipher.doFinal();
+                    if (finalData != null) {
+                        out.write(finalData);
+                    }
+                }
+                return null;
+            } catch (Exception e) {
+                return e;
+            }
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            progressDialog.setProgress(values[0]);
+        }
+
+        @Override
+        protected void onPostExecute(Exception e) {
+            progressDialog.dismiss();
+            if (e == null) {
+                Toast.makeText(MainActivity.this, getString(R.string.encrypted_file), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, getString(R.string.encryption_failed_toast), Toast.LENGTH_LONG).show();
             }
         }
     }
 
-    private void decryptFile(Uri sourceUri, Uri destUri) throws Exception {
-        try (InputStream in = getContentResolver().openInputStream(sourceUri);
-             OutputStream out = getContentResolver().openOutputStream(destUri)) {
+    @SuppressLint("StaticFieldLeak")
+    private class DecryptFileTask extends AsyncTask<Uri, Integer, Exception> {
+        @Override
+        protected void onPreExecute() {
+            progressDialog.setTitle(getString(R.string.decrypting_file));
+            progressDialog.setMessage(getString(R.string.please_wait));
+            progressDialog.setMax(100);
+            progressDialog.setProgress(0);
+            progressDialog.show();
+        }
 
-            int keyLength = ((in.read() & 0xFF) << 8) | (in.read() & 0xFF);
+        @Override
+        protected Exception doInBackground(Uri... uris) {
+            Uri sourceUri = uris[0];
+            Uri destUri = uris[1];
+            try {
+                long totalSize = getFileSize(MainActivity.this, sourceUri);
+                long bytesProcessed = 0;
 
-            byte[] encryptedAesKey = new byte[keyLength];
-            in.read(encryptedAesKey);
+                try (InputStream in = getContentResolver().openInputStream(sourceUri);
+                     OutputStream out = getContentResolver().openOutputStream(destUri)) {
+                    assert in != null;
+                    int keyLength = ((in.read() & 0xFF) << 8) | (in.read() & 0xFF);
+                    bytesProcessed += 2;
 
-            byte[] ivBytes = new byte[16];
-            in.read(ivBytes);
-            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+                    byte[] encryptedAesKey = new byte[keyLength];
+                    in.read(encryptedAesKey);
+                    bytesProcessed += keyLength;
 
-            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            rsaCipher.init(Cipher.DECRYPT_MODE, runtimePrivateKey);
-            byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
-            SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+                    byte[] ivBytes = new byte[16];
+                    in.read(ivBytes);
+                    bytesProcessed += 16;
 
-            Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            aesCipher.init(Cipher.DECRYPT_MODE, aesKey, iv);
+                    Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                    rsaCipher.init(Cipher.DECRYPT_MODE, runtimePrivateKey);
+                    byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
+                    SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = in.read(buffer)) != -1) {
-                byte[] decryptedData = aesCipher.update(buffer, 0, len);
-                if (decryptedData != null) {
-                    out.write(decryptedData);
+                    Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                    aesCipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(ivBytes));
+
+                    byte[] buffer = new byte[4096];
+                    int len;
+                    while ((len = in.read(buffer)) != -1) {
+                        byte[] decryptedData = aesCipher.update(buffer, 0, len);
+                        if (decryptedData != null) {
+                            assert out != null;
+                            out.write(decryptedData);
+                        }
+                        bytesProcessed += len;
+                        if (totalSize > 0) {
+                            publishProgress((int) ((bytesProcessed * 100) / totalSize));
+                        }
+                    }
+
+                    byte[] finalData = aesCipher.doFinal();
+                    if (finalData != null) {
+                        assert out != null;
+                        out.write(finalData);
+                    }
                 }
+                return null;
+            } catch (Exception e) {
+                return e;
             }
+        }
 
-            byte[] finalData = aesCipher.doFinal();
-            if (finalData != null) {
-                out.write(finalData);
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            progressDialog.setProgress(values[0]);
+        }
+
+        @Override
+        protected void onPostExecute(Exception e) {
+            progressDialog.dismiss();
+            if (e == null) {
+                Toast.makeText(MainActivity.this, getString(R.string.decrypted_file), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, getString(R.string.decryption_failed_toast), Toast.LENGTH_LONG).show();
             }
         }
     }
+
 
     private void initializeKeys() {
         if (prefs.contains("myPublicKey") && prefs.contains("encryptedPrivateKey")) {
@@ -488,7 +598,7 @@ public class MainActivity extends AppCompatActivity {
                 dialog.dismiss();
             } catch (Exception e) {
                 e.printStackTrace();
-                Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_2 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.generate_rsa_key_pair_builder_toast_2, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -530,7 +640,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1, Toast.LENGTH_SHORT).show();
                     } catch (Exception e) {
                         e.printStackTrace();
-                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1 + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1, Toast.LENGTH_LONG).show();
                         promptForPasswordToDecrypt();
                     }
                 })
@@ -593,7 +703,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.encrypted_message_copied_to_clipboard_toast, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, R.string.encryption_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.encryption_failed_toast, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -629,7 +739,7 @@ public class MainActivity extends AppCompatActivity {
             messageEditText.setText(new String(decryptedBytes));
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, R.string.decryption_failed_toast + " " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.decryption_failed_toast, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -779,7 +889,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] messageHash = digest.digest(message.getBytes("UTF-8"));
+            byte[] messageHash = digest.digest(message.getBytes(StandardCharsets.UTF_8));
 
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             rsaCipher.init(Cipher.ENCRYPT_MODE, runtimePrivateKey);
@@ -846,7 +956,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] messageHash = digest.digest(message.getBytes("UTF-8"));
+            byte[] messageHash = digest.digest(message.getBytes(StandardCharsets.UTF_8));
 
             byte[] signature = Base64.decode(signatureBase64, Base64.DEFAULT);
 
@@ -875,9 +985,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.clear_message_title))
                 .setMessage(getString(R.string.clear_message_confirm))
-                .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
-                    messageEditText.setText("");
-                })
+                .setPositiveButton(getString(R.string.yes), (dialog, which) -> messageEditText.setText(""))
                 .setNegativeButton(getString(R.string.no), null)
                 .setCancelable(true)
                 .show();
