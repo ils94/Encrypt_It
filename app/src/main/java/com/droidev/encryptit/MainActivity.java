@@ -498,6 +498,7 @@ public class MainActivity extends AppCompatActivity {
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle(R.string.encryption_complete_title)
                         .setMessage(R.string.encryption_complete_message)
+                        .setCancelable(false)
                         .setPositiveButton(R.string.save_button, (dialog, which) -> {
                             Toast.makeText(MainActivity.this, getString(R.string.encrypted_file), Toast.LENGTH_SHORT).show();
                         })
