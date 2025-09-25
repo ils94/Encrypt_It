@@ -138,7 +138,47 @@ public class MainActivity extends AppCompatActivity {
 
         encryptButton.setOnClickListener(v -> encryptMessage());
         decryptButton.setOnClickListener(v -> decryptMessage());
+
+        handleIncomingIntent(getIntent());
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        String action = intent.getAction();
+        Uri fileUri = intent.getData();
+
+        if (Intent.ACTION_VIEW.equals(action) && fileUri != null) {
+            pendingSourceUri = fileUri;
+            pendingEncrypt = false;
+
+            if (runtimePrivateKey != null) {
+                // Descriptografa imediatamente
+                promptForSaveLocationAndDecrypt(pendingSourceUri);
+            } else {
+                // Senão, pede senha primeiro
+                promptForPasswordToDecrypt();
+            }
+        }
+    }
+
+    private void promptForSaveLocationAndDecrypt(Uri sourceUri) {
+        String originalName = getFileName(this, sourceUri);
+        String decryptedName = originalName.endsWith(".enc") ?
+                originalName.substring(0, originalName.length() - 4) : "decrypted_" + originalName;
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*"); // Ou use o tipo do arquivo original
+        intent.putExtra(Intent.EXTRA_TITLE, decryptedName);
+        startActivityForResult(intent, REQUEST_DECRYPT_FILE + 100);
+    }
+
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupTripleTapListener() {
@@ -378,6 +418,8 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("StaticFieldLeak")
     private class EncryptFileTask extends AsyncTask<Uri, Integer, Exception> {
+        private Uri destUri;
+
         @Override
         protected void onPreExecute() {
             progressDialog.setTitle(getString(R.string.encrypting_file));
@@ -390,7 +432,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Exception doInBackground(Uri... uris) {
             Uri sourceUri = uris[0];
-            Uri destUri = uris[1];
+            destUri = uris[1];
             try {
                 byte[] aesKeyBytes = new byte[32];
                 new SecureRandom().nextBytes(aesKeyBytes);
@@ -453,11 +495,27 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Exception e) {
             progressDialog.dismiss();
             if (e == null) {
-                Toast.makeText(MainActivity.this, getString(R.string.encrypted_file), Toast.LENGTH_SHORT).show();
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle(R.string.encryption_complete_title)
+                        .setMessage(R.string.encryption_complete_message)
+                        .setPositiveButton(R.string.save_button, (dialog, which) -> {
+                            Toast.makeText(MainActivity.this, getString(R.string.encrypted_file), Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton(R.string.share_button, (dialog, which) -> shareEncryptedFile(destUri))
+                        .setCancelable(false)
+                        .show();
             } else {
                 Toast.makeText(MainActivity.this, getString(R.string.encryption_failed_toast), Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void shareEncryptedFile(Uri fileUri) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("application/octet-stream");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(shareIntent, "Share Encrypted File"));
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -640,7 +698,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1, Toast.LENGTH_SHORT).show();
                     } catch (Exception e) {
                         e.printStackTrace();
-                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_1, Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, R.string.prompt_for_password_to_decrypt_toast_2, Toast.LENGTH_LONG).show();
                         promptForPasswordToDecrypt();
                     }
                 })

@@ -60,7 +60,7 @@
     <string name="prompt_for_password_to_decrypt_builder_title">Unlock Private Key</string>
     <string name="unlock_button">Unlock</string>
     <string name="prompt_for_password_to_decrypt_toast_1">Private key unlocked</string>
-    <string name="prompt_for_password_to_decrypt_toast_2">Decryption failed:</string>
+    <string name="prompt_for_password_to_decrypt_toast_2">Wrong password</string>
 
     <string name="menu_group_contacts">Contacts</string>
     <string name="menu_group_keys">Keys</string>
@@ -100,4 +100,10 @@
 
     <string name="cannot_paste_message_field_not_empty">Cannot paste: Message field is not empty</string>
     <string name="clipboard_empty">Clipboard is empty</string>
+
+    <string name="encryption_complete_title">Encryption Complete</string>
+    <string name="encryption_complete_message">Share file via Intent?</string>
+    <string name="save_button">NO</string>
+    <string name="share_button">YES</string>
+
 </resources>

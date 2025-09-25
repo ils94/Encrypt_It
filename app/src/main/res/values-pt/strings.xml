@@ -60,7 +60,7 @@
     <string name="prompt_for_password_to_decrypt_builder_title">Desbloquear Chave Privada</string>
     <string name="unlock_button">Desbloquear</string>
     <string name="prompt_for_password_to_decrypt_toast_1">Chave privada desbloqueada</string>
-    <string name="prompt_for_password_to_decrypt_toast_2">Falha na descriptografia:</string>
+    <string name="prompt_for_password_to_decrypt_toast_2">Senha errada</string>
 
     <string name="menu_group_contacts">Contatos</string>
     <string name="menu_group_keys">Chaves</string>
@@ -100,4 +100,9 @@
 
     <string name="cannot_paste_message_field_not_empty">Não é possível colar: Campo de mensagem não está vazio</string>
     <string name="clipboard_empty">Área de transferência está vazia</string>
+
+    <string name="encryption_complete_title">Criptografia Concluída</string>
+    <string name="encryption_complete_message">Compartilhar arquivo via Intent?</string>
+    <string name="save_button">NÃO</string>
+    <string name="share_button">SIM</string>
 </resources>
